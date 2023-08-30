@@ -1,0 +1,129 @@
+version: '3'
+
+tasks:
+  tf-init:
+    cmds:
+      - terraform init --upgrade
+  tf-apply:
+    cmds:
+      - terraform apply
+  tf-destroy:
+    cmds:
+      - terraform destroy
+  get-ip:
+    dir: ~/go/src/github.com/jdvgh/hetzner-tools-go
+    cmds:
+      - go run ./hetzner-tools-go server list
+  update-ip:
+    deps: [get-ip]
+    dir: ~/go/src/github.com/jdvgh/hetzner-tools-go
+    cmds:
+      - go run ./hetzner-tools-go dns list
+      - go run ./hetzner-tools-go dns updateBulk
+  _init-helm:
+    internal: true
+    dir: helm/{{.CHARTNAME}}
+    cmds:
+      - helm dependency build
+  init-helm:
+    - task: _init-helm
+      vars:
+        CHARTNAME: argocd
+    - task: _init-helm
+      vars:
+        CHARTNAME: cert-manager-templates
+    - task: _init-helm
+      vars:
+        CHARTNAME: traefik-templates
+    - task: _init-helm
+      vars:
+        CHARTNAME: nginx
+
+  init-cluster:
+    env:
+      KUBECONFIG: "k3s_kubeconfig.yaml"
+    cmds:
+      - task: init-helm
+      - task: create-namespaces
+      - task: helm-setup-cert-manager
+      - task: helm-install
+  helm-setup-cert-manager:
+    env:
+      KUBECONFIG: "k3s_kubeconfig.yaml"
+    cmds:
+      - helm install --namespace cert-manager cert-manager-webhook-hetzner cert-manager-webhook-hetzner/cert-manager-webhook-hetzner --values helm/cert-manager-webhook-hetzner/values.yaml --values helm/cert-manager-webhook-hetzner/secret_values.yaml || echo "cert-manager-webhook-hetzner"
+  _create-namespace:
+    internal: true
+    cmds:
+      - kubectl create namespace {{.NAMESPACE}} || echo "{{.NAMESPACE}} already exists"
+    env:
+      KUBECONFIG: "k3s_kubeconfig.yaml"
+  _helm-install:
+    internal: true
+    cmds:
+      - helm install --namespace {{.NAMESPACE}} --values helm/{{.CHARTNAME}}/values.yaml --values helm/{{.CHARTNAME}}/secret_values.yaml {{.CHARTNAME}} helm/{{.CHARTNAME}} || echo "{{.CHARTNAME}} already installed"
+    env:
+      KUBECONFIG: "k3s_kubeconfig.yaml"
+  _helm-upgrade:
+    internal: true
+    cmds:
+      - helm upgrade --namespace {{.NAMESPACE}} --values helm/{{.CHARTNAME}}/values.yaml --values helm/{{.CHARTNAME}}/secret_values.yaml {{.CHARTNAME}} helm/{{.CHARTNAME}}
+    env:
+      KUBECONFIG: "k3s_kubeconfig.yaml"
+  create-namespaces:
+    cmds:
+      - task: _create-namespace
+        vars:
+          NAMESPACE: nginx
+      - task: _create-namespace
+        vars:
+          NAMESPACE: argocd
+      - task: _create-namespace
+        vars:
+          NAMESPACE: cert-manager
+      - task: _create-namespace
+        vars:
+          NAMESPACE: traefik 
+    env:
+      KUBECONFIG: "k3s_kubeconfig.yaml"
+  helm-install:
+    cmds:
+      - task: _helm-install
+        vars:
+          NAMESPACE: nginx
+          CHARTNAME: nginx
+      - task: _helm-install
+        vars:
+          NAMESPACE: argocd
+          CHARTNAME: argocd
+      - task: _helm-install
+        vars:
+          NAMESPACE: cert-manager
+          CHARTNAME: cert-manager-templates
+      - task: _helm-install
+        vars:
+          NAMESPACE: traefik
+          CHARTNAME: traefik-templates
+    env:
+      KUBECONFIG: "k3s_kubeconfig.yaml"
+
+  helm-upgrade:
+    cmds:
+      - task: _helm-upgrade
+        vars:
+          NAMESPACE: nginx
+          CHARTNAME: nginx
+      - task: _helm-upgrade
+        vars:
+          NAMESPACE: argocd
+          CHARTNAME: argocd
+      - task: _helm-upgrade
+        vars:
+          NAMESPACE: cert-manager
+          CHARTNAME: cert-manager-templates
+      - task: _helm-upgrade
+        vars:
+          NAMESPACE: traefik
+          CHARTNAME: traefik-templates
+    env:
+      KUBECONFIG: "k3s_kubeconfig.yaml"

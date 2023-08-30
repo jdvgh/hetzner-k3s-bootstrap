@@ -1,0 +1,13 @@
+# clusterIssuer:
+#   email: example.pw@gmail.com
+#   zoneName: example.pw
+#   privateKeySecretRef:
+#     name: example-pw-staging-issuer-key
+#   groupName: acme.example.pw
+# certificate:
+#   name: example-pw-cert
+#   secretName: example-pw-cert
+#   commonName: example.pw
+#   dnsNames:
+#     - example.pw
+# secretDnsApiKey: "your-api-key"

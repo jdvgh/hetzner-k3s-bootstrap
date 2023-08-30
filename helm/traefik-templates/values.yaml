@@ -1,0 +1,31 @@
+# ingressRoute:
+#   traefik: traefik.example.pw
+# ingress:
+#   - name: traefik-ingress
+#     namespace: traefik
+#     annotations:
+#       cert-manager.io/cluster-issuer: "letsencrypt-staging"  
+#     hosts:
+#       - 'traefik.example.pw'
+#     secretName: traefik-example-pw-cert
+#     rules:
+#     - host: traefik.example.pw
+#       http:
+#         paths:
+#           - path: /dashboard
+#             pathType: Prefix
+#             backend:
+#               service:
+#                 name: traefik-service
+#                 port:
+#                   number: 9000
+#     - host: traefik.example.pw
+#       http:
+#         paths:
+#           - path: /api
+#             pathType: Prefix
+#             backend:
+#               service:
+#                 name: traefik-service
+#                 port:
+#                   number: 9000

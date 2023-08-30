@@ -1,0 +1,25 @@
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-staging
+spec:
+  acme:
+    # You must replace this email address with your own.
+    # Let's Encrypt will use this to contact you about expiring
+    # certificates, and issues related to your account.
+    email: {{ .Values.clusterIssuer.email }} 
+    server: https://acme-staging-v02.api.letsencrypt.org/directory
+    privateKeySecretRef:
+      # Secret resource that will be used to store the account's private key.
+      name: {{ .Values.clusterIssuer.privateKeySecretRef.name }} 
+    # Add a single challenge solver, HTTP01 using nginx
+    solvers:
+      - dns01:
+          webhook:
+            # This group needs to be configured when installing the helm package, otherwise the webhook won't have permission to create an ACME challenge for this API group.
+            groupName: {{ .Values.clusterIssuer.groupName}} 
+            solverName: hetzner
+            config:
+              secretName: hetzner-secret
+              zoneName: {{ .Values.clusterIssuer.zoneName }} # (Optional): When not provided the Zone will searched in Hetzner API by recursion on full domain name
+              apiUrl: https://dns.hetzner.com/api/v1

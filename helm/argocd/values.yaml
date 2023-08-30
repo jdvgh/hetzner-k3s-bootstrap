@@ -1,0 +1,53 @@
+argo-cd:
+  configs:
+    params:
+      server.insecure: true
+    cm:
+      # https://argo-cd.readthedocs.io/en/stable/operator-manual/user-management/#skipping-certificate-verification-on-oidc-provider-connections
+      oidc.tls.insecure.skip.verify: true
+        # url: https://example.com  # filled in secret_values.yaml 
+      dex.config: |
+        connectors:
+          # GitHub example
+          - type: github
+            id: github
+            name: GitHub
+            config:
+              clientID: $argocd-secret:CLIENTID
+              clientSecret: $argocd-secret:CLIENTSECRET 
+              orgs:
+                - name: jdvgh-gh-org
+    rbac:
+      policy.default: role:readonly
+      policy.csv: |
+        g, jdvgh-gh-org:jdvgh-org-team1, role:admin
+# argo-cd:
+#   configs:
+#    secret:
+#      extra:
+#        ISSUER: "issuer"
+#        CLIENTID: "asdads9"
+#        CLIENTSECRET: "asdasd"
+#    cm:
+#      url: https://argocd.example.pw
+# ingress:
+#   - name: argocd
+#     namespace: argocd
+#     annotations:
+#       cert-manager.io/cluster-issuer: "letsencrypt-staging"
+#     hosts:
+#       - argocd.example.pw
+#     secretName: argocd-example-pw-cert
+#     rules:
+#     - host: argocd.example.pw
+#       http:
+#         paths:
+#           - path: /
+#             pathType: Prefix
+#             backend:
+#               service:
+#                 name: argocd-server
+#                 port:
+#                   name: http
+# ingressRoute:
+#   argocd: argocd.example.pw

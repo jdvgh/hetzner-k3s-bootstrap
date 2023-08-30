@@ -42,3 +42,4 @@ kustomization.yaml
 .terraform.lock.hcl
 
 secret_values.yaml
+**/charts/*.tgz
