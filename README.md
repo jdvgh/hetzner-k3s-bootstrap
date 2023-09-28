@@ -8,7 +8,10 @@ task tf-apply
 task init-cluster
 task update-ip
 ```
-
+To monitor cluster with k9s (this uses the `k3s_kubeconfig.yaml` file as the `KUBECONFIG` environ - created by `terraform-kube-hetzner` in `task tf-apply` ):
+```
+task k9s
+```
 To tear down:
 
 ```

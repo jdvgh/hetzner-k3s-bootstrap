@@ -1,6 +1,11 @@
 version: '3'
 
 tasks:
+  k9s:
+    env:
+      KUBECONFIG: "k3s_kubeconfig.yaml"
+    cmds:
+      - k9s
   tf-init:
     cmds:
       - terraform init --upgrade
