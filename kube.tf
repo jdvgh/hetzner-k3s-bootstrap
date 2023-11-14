@@ -13,6 +13,7 @@ module "kube-hetzner" {
   providers = {
     hcloud = hcloud
   }
+  version      = "2.9.3"
   hcloud_token = var.hcloud_token != "" ? var.hcloud_token : local.hcloud_token
 
   # Then fill or edit the below values. Only the first values starting with a * are obligatory; the rest can remain with their default values, or you
@@ -25,7 +26,7 @@ module "kube-hetzner" {
   ssh_public_key = file(var.ssh_public_key_file_path)
   # * Your private key must be "ssh_private_key = null" when you want to use ssh-agent for a Yubikey-like device authentification or an SSH key-pair with a passphrase.
   # For more details on SSH see https://github.com/kube-hetzner/kube-hetzner/blob/master/docs/ssh.md
-  ssh_private_key = null
+  ssh_private_key = file(var.ssh_private_key_file_path)
 
   # If you want to use an ssh key that is already registered within hetzner cloud, you can pass its id.
   # If no id is passed, a new ssh key will be registered within hetzner cloud.
@@ -71,6 +72,11 @@ module "kube-hetzner" {
       labels      = [],
       taints      = [],
       count       = 1
+      # swap_size   = "2G" # remember to add the suffix, examples: 512M, 1G
+      # zram_size   = "2G" # remember to add the suffix, examples: 512M, 1G
+      # kubelet_args = ["kube-reserved=cpu=100m,memory=200Mi,ephemeral-storage=1Gi", "system-reserved=cpu=memory=200Mi"]
+
+
 
       # Enable automatic backups via Hetzner (default: false)
       # backups = true
@@ -107,6 +113,11 @@ module "kube-hetzner" {
       labels      = [],
       taints      = [],
       count       = 0
+      # swap_size   = "2G" # remember to add the suffix, examples: 512M, 1G
+      # zram_size   = "2G" # remember to add the suffix, examples: 512M, 1G
+      # kubelet_args = ["kube-reserved=cpu=100m,memory=200Mi,ephemeral-storage=1Gi", "system-reserved=cpu=memory=200Mi"]
+
+
 
       # Enable automatic backups via Hetzner (default: false)
       # backups = true
@@ -171,6 +182,8 @@ module "kube-hetzner" {
   # * LB location and type, the latter will depend on how much load you want it to handle, see https://www.hetzner.com/cloud/load-balancer
   load_balancer_type     = "lb11"
   load_balancer_location = "fsn1"
+  # Disable IPv6 for the load balancer, the default is false.
+  load_balancer_disable_ipv6 = false
 
   # If you want to disable the automatic upgrade of k3s, you can set below to "false".
   # Ideally, keep it on, to always have the latest Kubernetes version, but lock the initial_k3s_channel to a kube major version,
@@ -199,11 +212,11 @@ provider "hcloud" {
 }
 
 terraform {
-  required_version = ">= 1.4.0"
+  required_version = ">= 1.5.0"
   required_providers {
     hcloud = {
       source  = "hetznercloud/hcloud"
-      version = ">= 1.41.0"
+      version = ">= 1.43.0"
     }
   }
 }
@@ -214,13 +227,21 @@ output "kubeconfig" {
 }
 
 variable "hcloud_token" {
+  type      = string
   sensitive = true
   default   = ""
 }
 
 variable "ssh_key_hetzner_fingerprint" {
+  type      = string
   sensitive = true
 }
 variable "ssh_public_key_file_path" {
+  type      = string
+  sensitive = true
+}
+
+variable "ssh_private_key_file_path" {
+  type      = string
   sensitive = true
 }

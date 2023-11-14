@@ -1,5 +1,9 @@
 # Hetzner-k3s-bootstrap
-
+Initial setup
+```
+hcloud context create project <id>
+task helm-repo-add 
+```
 Personal repo for bootstrapping my single-node k3s cluster on Hetzner-Cloud.
 
 ```

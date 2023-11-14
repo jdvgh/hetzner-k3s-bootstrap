@@ -25,7 +25,6 @@ argo-cd:
 #   configs:
 #    secret:
 #      extra:
-#        ISSUER: "issuer"
 #        CLIENTID: "asdads9"
 #        CLIENTSECRET: "asdasd"
 #    cm:

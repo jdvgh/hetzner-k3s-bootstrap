@@ -43,3 +43,4 @@ kustomization.yaml
 
 secret_values.yaml
 **/charts/*.tgz
+.env
