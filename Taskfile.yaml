@@ -1,10 +1,16 @@
 version: '3'
 
+dotenv: ['.env']
 tasks:
   helm-repo-add:
     cmds:
       - helm repo add argo https://argoproj.github.io/argo-helm
       - helm repo add cert-manager-webhook-hetzner https://vadimkim.github.io/cert-manager-webhook-hetzner 
+  kubeconfig-setup:
+    cmds:
+      - kubecm delete k3s-hetzner || true
+      - kubecm add -cf k3s_kubeconfig.yaml --context-name k3s-hetzner
+      - kubecm switch k3s-hetzner
   k9s:
     env:
       KUBECONFIG: "k3s_kubeconfig.yaml"
