@@ -1,0 +1,14 @@
+apiVersion: v2
+appVersion: v1.21.0
+dependencies:
+- condition: auth.dexAuth.installDex
+  name: dex
+  repository: https://charts.dexidp.io
+  version: 0.14.2
+description: freiheit.com contiuous delivery
+maintainers:
+- name: hannesg
+- name: sven-urbanski-freiheit-com
+name: kuberpult
+type: application
+version: v1.21.0

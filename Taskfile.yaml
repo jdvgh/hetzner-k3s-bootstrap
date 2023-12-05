@@ -43,6 +43,9 @@ tasks:
   init-helm:
     - task: _init-helm
       vars:
+        CHARTNAME: kuberpult
+    - task: _init-helm
+      vars:
         CHARTNAME: argocd
     - task: _init-helm
       vars:
@@ -99,6 +102,9 @@ tasks:
       - task: _create-namespace
         vars:
           NAMESPACE: traefik 
+      - task: _create-namespace
+        vars:
+          NAMESPACE: kuberpult
     env:
       KUBECONFIG: "k3s_kubeconfig.yaml"
   helm-install:
@@ -119,8 +125,21 @@ tasks:
         vars:
           NAMESPACE: traefik
           CHARTNAME: traefik-templates
+      - task: _helm-install
+        vars:
+          NAMESPACE: kuberpult
+          CHARTNAME: kuberpult
     env:
       KUBECONFIG: "k3s_kubeconfig.yaml"
+  helm-install-kuberpult:
+    cmds:
+      - task: _helm-install
+        vars:
+          NAMESPACE: kuberpult
+          CHARTNAME: kuberpult
+    env:
+      KUBECONFIG: "k3s_kubeconfig.yaml"
+
 
   helm-upgrade:
     cmds:
@@ -140,5 +159,17 @@ tasks:
         vars:
           NAMESPACE: traefik
           CHARTNAME: traefik-templates
+      - task: _helm-upgrade
+        vars:
+          NAMESPACE: kuberpult
+          CHARTNAME: kuberpult
+    env:
+      KUBECONFIG: "k3s_kubeconfig.yaml"
+  helm-upgrade-kuberpult:
+    cmds:
+      - task: _helm-upgrade
+        vars:
+          NAMESPACE: kuberpult
+          CHARTNAME: kuberpult
     env:
       KUBECONFIG: "k3s_kubeconfig.yaml"
