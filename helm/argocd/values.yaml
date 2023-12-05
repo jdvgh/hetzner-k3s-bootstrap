@@ -3,7 +3,7 @@ argo-cd:
     params:
       server.insecure: true
     cm:
-      application.resourceTrackingMethod: annotation
+      application.resourceTrackingMethod: annotation+label
       # https://argo-cd.readthedocs.io/en/stable/operator-manual/user-management/#skipping-certificate-verification-on-oidc-provider-connections
       oidc.tls.insecure.skip.verify: true
         # url: https://example.com  # filled in secret_values.yaml 
