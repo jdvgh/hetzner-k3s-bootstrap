@@ -13,9 +13,17 @@ module "kube-hetzner" {
   providers = {
     hcloud = hcloud
   }
-  version      = "2.9.3"
+  version      = "2.11.8"
   hcloud_token = var.hcloud_token != "" ? var.hcloud_token : local.hcloud_token
-
+  extra_firewall_rules = [
+      {
+        description     = "Allow Outbound SSH Requests"
+        direction       = "out"
+        protocol        = "tcp"
+        port            = "22"
+        destination_ips = ["0.0.0.0/0", "::/0"]
+      },
+  ]
   # Then fill or edit the below values. Only the first values starting with a * are obligatory; the rest can remain with their default values, or you
   # could adapt them to your needs.
 
@@ -67,7 +75,7 @@ module "kube-hetzner" {
   control_plane_nodepools = [
     {
       name        = "control-plane-fsn1",
-      server_type = "cax21",
+      server_type = "cpx21",
       location    = "fsn1",
       labels      = [],
       taints      = [],

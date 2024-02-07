@@ -44,3 +44,5 @@ kustomization.yaml
 secret_values.yaml
 **/charts/*.tgz
 .env
+id_ed25519
+id_ed25519.pub
