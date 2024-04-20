@@ -1,0 +1,7 @@
+apiVersion: v2
+name: bootstrapper
+version: 0.0.1
+dependencies:
+- name: gateway
+  version: "1.21.1"
+  repository: "https://istio-release.storage.googleapis.com/charts"

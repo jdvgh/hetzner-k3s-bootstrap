@@ -1,0 +1,6 @@
+dependencies:
+- name: cert-manager-webhook-hetzner
+  repository: https://vadimkim.github.io/cert-manager-webhook-hetzner
+  version: 1.3.1
+digest: sha256:8a45ada5d88a86ad57d784908f47a4fd3f2776c2f961e6412714163b880f0e90
+generated: "2024-04-18T12:18:25.161727965+02:00"

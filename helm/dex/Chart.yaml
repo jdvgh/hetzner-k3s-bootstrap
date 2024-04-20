@@ -1,0 +1,7 @@
+apiVersion: v2
+name: bootstrapper
+version: 0.0.1
+dependencies:
+- name: dex
+  version: "0.17.1"
+  repository: "https://charts.dexidp.io"

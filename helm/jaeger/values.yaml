@@ -1,0 +1,4 @@
+hosts:
+  - jaeger.example.com
+jaeger:
+  nameOverride: k8s

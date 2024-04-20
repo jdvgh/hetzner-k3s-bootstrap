@@ -1,0 +1,58 @@
+oauth2-proxy:
+  config:
+    cookieSecret: "abcdefg" # https://oauth2-proxy.github.io/oauth2-proxy/docs/configuration/overview/#generating-a-cookie-secret
+    configFile: |-
+      email_domains = [ "*" ]        # Restrict to these E-Mail Domains, a wildcard "*" allows any email
+  alphaConfig:
+    enabled: true
+    configData:
+      upstreamConfig:
+        upstreams:
+        - id: static_200
+          path: /
+          static: true
+          staticCode: 200
+      providers:
+      - clientID:  "oauth2-proxy-id"      # IdP Client ID
+        clientSecret: "oauth2-proxy-secret"   # IdP Client Secret
+        id: oidc-istio
+        provider: oidc   # We use the generic 'oidc' provider
+        loginURL: https://dex.example.com/auth
+        redeemURL: https://dex.example.com/token
+        profileURL: https://dex.example.com/userinfo
+        validateURL: https://dex.example.com/userinfo
+        scope: "openid email profile groups"
+        oidcConfig:
+          emailClaim: sub  # Name of the claim in JWT containing the E-Mail
+          groupsClaim: groups # Name of the claim in JWT containing the Groups
+          userIDClaim: email  # Name of the claim in JWT containing the User ID
+          audienceClaims:
+            - aud
+          skipDiscovery: true # You can try using the well-knwon endpoint directly for auto discovery, here we won't use it
+          issuerURL: https://dex.example.com
+          jwksURL: https://dex.example.com/keys
+        # allowedGroups:
+        # - admins # List all groups managed at our your IdP which should be allowed access
+        # # - infrateam
+        # # - anothergroup
+      # Headers that should be added to responses from the proxy
+      injectResponseHeaders: # Send this headers in responses from oauth2-proxy
+        - name: X-Auth-Request-Preferred-Username
+          values:
+            - claim: preferred_username
+        - name: X-Auth-Request-Email
+          values:
+            - claim: email
+  extraArgs:
+    cookie-secure: "false"
+    cookie-domain: ".example.com"    # Replace with your base domain
+    cookie-samesite: lax
+    cookie-expire: 12h               # How long our Cookie is valid
+    auth-logging: true               # Enable / Disable auth logs
+    request-logging: true            # Enable / Disable request logs
+    standard-logging: true           # Enable / Disable the standart logs
+    show-debug-on-error: true        # Disable in production setups
+    skip-provider-button: true       # We only have one provider configured (Keycloak)
+    silence-ping-logging: true       # Keeps our logs clean
+    whitelist-domain: ".example.com" # Replace with your base domain
+    ssl-insecure-skip-verify: true

@@ -1,0 +1,29 @@
+# apiVersion: security.istio.io/v1beta1
+# kind: AuthorizationPolicy
+# metadata:
+#   name: deny-all-ingress-level
+#   namespace: {{ .Release.Namespace }}
+# spec:
+#   selector:
+#     matchLabels:
+#       istio: ingress
+# ---
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: oauth-policy
+  namespace: {{ .Release.Namespace }}
+spec:
+  selector:
+    matchLabels:
+      istio: ingress
+  action: CUSTOM
+  provider:
+    name: "oauth2-proxy"
+  rules:
+  - to:
+    - operation:
+        hosts:
+{{ toYaml .Values.authorizationPolicy.hosts | indent 8 }}
+        notHosts:
+{{ toYaml .Values.authorizationPolicy.notHosts | indent 8 }}

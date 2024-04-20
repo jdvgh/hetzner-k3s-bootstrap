@@ -9,11 +9,12 @@ Personal repo for bootstrapping my single-node k3s cluster on Hetzner-Cloud.
 ```
 task tf-init
 task tf-apply
-task init-cluster
+task cluster-init
 task update-ip
 ```
 To monitor cluster with k9s (this uses the `k3s_kubeconfig.yaml` file as the `KUBECONFIG` environ - created by `terraform-kube-hetzner` in `task tf-apply` ):
 ```
+task kubeconfig-setup
 task k9s
 ```
 To tear down:

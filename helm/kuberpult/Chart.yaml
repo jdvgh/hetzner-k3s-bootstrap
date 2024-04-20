@@ -3,5 +3,5 @@ name: bootstrapper-kuberpult
 version: 0.0.1
 dependencies:
 - name: kuberpult
-  version: v1.21.0
+  version: v2.24.0
   repository: "file://dependencies/kuberpult"

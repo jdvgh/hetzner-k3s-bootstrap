@@ -5,7 +5,19 @@ tasks:
   helm-repo-add:
     cmds:
       - helm repo add argo https://argoproj.github.io/argo-helm
-      - helm repo add cert-manager-webhook-hetzner https://vadimkim.github.io/cert-manager-webhook-hetzner 
+      - helm repo add cert-manager-webhook-hetzner https://vadimkim.github.io/cert-manager-webhook-hetzner
+      - helm repo add jetstack https://charts.jetstack.io
+      - helm repo add istio https://istio-release.storage.googleapis.com/charts
+      - helm repo add kiali https://kiali.org/helm-charts
+      - helm repo add dex https://charts.dexidp.io
+      - helm repo add oauth2-proxy https://oauth2-proxy.github.io/manifests
+      - helm repo add ealenn https://ealenn.github.io/charts
+      - helm repo add jaegertracing https://jaegertracing.github.io/helm-charts
+      - helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+      - helm repo add grafana https://grafana.github.io/helm-charts
+  helm-repo-update:
+    cmds:
+      - helm repo update
   kubeconfig-setup:
     cmds:
       - kubecm delete k3s-hetzner || true
@@ -25,112 +37,265 @@ tasks:
   tf-destroy:
     cmds:
       - terraform destroy
-  get-ip:
+  get-ip-server:
     dir: ~/go/src/github.com/jdvgh/hetzner-tools-go
     cmds:
       - go run ./hetzner-tools-go server list
+  get-ip-load-balancer:
+    dir: ~/go/src/github.com/jdvgh/hetzner-tools-go
+    cmds:
+      - go run ./hetzner-tools-go loadBalancer list
   update-ip:
-    deps: [get-ip]
+    deps: [get-ip-load-balancer, get-ip-server]
     dir: ~/go/src/github.com/jdvgh/hetzner-tools-go
     cmds:
       - go run ./hetzner-tools-go dns list
       - go run ./hetzner-tools-go dns updateBulk
-  _init-helm:
+  _helm-init:
     internal: true
     dir: helm/{{.CHARTNAME}}
     cmds:
       - helm dependency build
-  init-helm:
-    - task: _init-helm
+  helm-init:
+    - task: _helm-init
       vars:
         CHARTNAME: kuberpult
-    - task: _init-helm
+    - task: _helm-init
+      vars:
+        CHARTNAME: echo-server
+    - task: _helm-init
+      vars:
+        CHARTNAME: jaeger
+    - task: _helm-init
+      vars:
+        CHARTNAME: grafana
+    - task: _helm-init
+      vars:
+        CHARTNAME: prometheus
+    - task: _helm-init
+      vars:
+        CHARTNAME: cert-manager
+    - task: _helm-init
+      vars:
+        CHARTNAME: cert-manager-webhook-hetzner
+    - task: _helm-init
       vars:
         CHARTNAME: argocd
-    - task: _init-helm
+    - task: _helm-init
       vars:
         CHARTNAME: cert-manager-templates
-    - task: _init-helm
-      vars:
-        CHARTNAME: traefik-templates
-    - task: _init-helm
+    - task: _helm-init
       vars:
         CHARTNAME: nginx
-
-  init-cluster:
+    - task: _helm-init
+      vars:
+        CHARTNAME: istio-base
+    - task: _helm-init
+      vars:
+        CHARTNAME: istiod
+    - task: _helm-init
+      vars:
+        CHARTNAME: istio-ingress
+    - task: _helm-init
+      vars:
+        CHARTNAME: kiali
+    - task: _helm-init
+      vars:
+        CHARTNAME: dex
+    - task: _helm-init
+      vars:
+        CHARTNAME: oauth2-proxy
+  cluster-init:
     env:
       KUBECONFIG: "k3s_kubeconfig.yaml"
     cmds:
-      - task: init-helm
+      - task: helm-init
       - task: create-namespaces
-      - task: helm-setup-cert-manager
       - task: helm-install
-  helm-setup-cert-manager:
-    env:
-      KUBECONFIG: "k3s_kubeconfig.yaml"
-    cmds:
-      - helm install --namespace cert-manager cert-manager-webhook-hetzner cert-manager-webhook-hetzner/cert-manager-webhook-hetzner --values helm/cert-manager-webhook-hetzner/values.yaml --values helm/cert-manager-webhook-hetzner/secret_values.yaml || echo "cert-manager-webhook-hetzner"
   _create-namespace:
     internal: true
     cmds:
       - kubectl create namespace {{.NAMESPACE}} || echo "{{.NAMESPACE}} already exists"
+    requires:
+      vars: [NAMESPACE]
+    env:
+      KUBECONFIG: "k3s_kubeconfig.yaml"
+  _annotate-namespace:
+    internal: true
+    cmds:
+      - kubectl annotate namespace {{.NAMESPACE}} scheduler.alpha.kubernetes.io/node-selector='kubernetes.io/arch={{.ARCHITECTURE}}'
+    requires:
+      vars: [NAMESPACE, ARCHITECTURE]
     env:
       KUBECONFIG: "k3s_kubeconfig.yaml"
   _helm-install:
     internal: true
+    vars:
+
     cmds:
-      - helm install --namespace {{.NAMESPACE}} --values helm/{{.CHARTNAME}}/values.yaml --values helm/{{.CHARTNAME}}/secret_values.yaml {{.CHARTNAME}} helm/{{.CHARTNAME}} || echo "{{.CHARTNAME}} already installed"
+      - helm install --namespace {{.NAMESPACE}} --values helm/{{.CHARTNAME}}/values.yaml --values helm/{{.CHARTNAME}}/secret_values.yaml {{.CHARTNAME}} helm/{{.CHARTNAME}} --wait --timeout 60s  || echo "{{.CHARTNAME}} already installed"
     env:
       KUBECONFIG: "k3s_kubeconfig.yaml"
+    requires:
+      vars: [NAMESPACE, CHARTNAME]
   _helm-upgrade:
     internal: true
     cmds:
       - helm upgrade --namespace {{.NAMESPACE}} --values helm/{{.CHARTNAME}}/values.yaml --values helm/{{.CHARTNAME}}/secret_values.yaml {{.CHARTNAME}} helm/{{.CHARTNAME}}
     env:
       KUBECONFIG: "k3s_kubeconfig.yaml"
+    requires:
+      vars: [NAMESPACE, CHARTNAME]
   create-namespaces:
     cmds:
       - task: _create-namespace
         vars:
           NAMESPACE: nginx
+      - task: _annotate-namespace
+        vars:
+          NAMESPACE: nginx
+          ARCHITECTURE: arm64
+      - task: _label-namespace-istio-injection-enabled
+        vars:
+          NAMESPACE: nginx
+      - task: _create-namespace
+        vars:
+          NAMESPACE: echo-server
+      - task: _annotate-namespace
+        vars:
+          NAMESPACE: echo-server
+          ARCHITECTURE: arm64
+      - task: _label-namespace-istio-injection-enabled
+        vars:
+          NAMESPACE: echo-server
       - task: _create-namespace
         vars:
           NAMESPACE: argocd
+      - task: _annotate-namespace
+        vars:
+          NAMESPACE: argocd
+          ARCHITECTURE: arm64
       - task: _create-namespace
         vars:
           NAMESPACE: cert-manager
-      - task: _create-namespace
+      - task: _annotate-namespace
         vars:
-          NAMESPACE: traefik 
+          NAMESPACE: cert-manager
+          ARCHITECTURE: arm64
       - task: _create-namespace
         vars:
           NAMESPACE: kuberpult
+      - task: _annotate-namespace
+        vars:
+          NAMESPACE: kuberpult
+          ARCHITECTURE: amd64
+      - task: _create-namespace
+        vars:
+          NAMESPACE: istio-system
+      - task: _annotate-namespace
+        vars:
+          NAMESPACE: istio-system
+          ARCHITECTURE: arm64
+      - task: _create-namespace
+        vars:
+          NAMESPACE: istio-ingress
+      - task: _annotate-namespace
+        vars:
+          NAMESPACE: istio-ingress
+          ARCHITECTURE: arm64
+      - task: _create-namespace
+        vars:
+          NAMESPACE: dex
+      - task: _annotate-namespace
+        vars:
+          NAMESPACE: dex
+          ARCHITECTURE: arm64
+      - task: _label-namespace-istio-injection-enabled
+        vars:
+          NAMESPACE: dex
+      - task: _create-namespace
+        vars:
+          NAMESPACE: oauth2-proxy
+      - task: _annotate-namespace
+        vars:
+          NAMESPACE: oauth2-proxy
+          ARCHITECTURE: arm64
+      - task: _label-namespace-istio-injection-enabled
+        vars:
+          NAMESPACE: oauth2-proxy
     env:
       KUBECONFIG: "k3s_kubeconfig.yaml"
   helm-install:
     cmds:
+      - task: helm-install-cert-manager
+      - task: helm-install-cert-manager-webhook-hetzner
+      - task: helm-install-cert-manager-templates
+      - task: helm-install-istio
+      - task: helm-install-jaeger
+      - task: helm-install-prometheus
+      - task: helm-install-grafana
+      # - task: _helm-install
+      #   vars:
+      #     NAMESPACE: istio-system
+      #     CHARTNAME: kiali
       - task: _helm-install
         vars:
           NAMESPACE: nginx
           CHARTNAME: nginx
       - task: _helm-install
         vars:
+          NAMESPACE: echo-server
+          CHARTNAME: echo-server
+      - task: _helm-install
+        vars:
           NAMESPACE: argocd
           CHARTNAME: argocd
+      - task: helm-install-kuberpult
+      - task: helm-install-dex
+      - task: helm-install-oauth2-proxy
+    env:
+      KUBECONFIG: "k3s_kubeconfig.yaml"
+  helm-install-oauth2-proxy:
+    cmds:
+      - task: _helm-install
+        vars:
+          NAMESPACE: oauth2-proxy
+          CHARTNAME: oauth2-proxy
+    env:
+      KUBECONFIG: "k3s_kubeconfig.yaml"
+  helm-install-dex:
+    cmds:
+      - task: _helm-install
+        vars:
+          NAMESPACE: dex
+          CHARTNAME: dex
+    env:
+      KUBECONFIG: "k3s_kubeconfig.yaml"
+  helm-install-cert-manager-webhook-hetzner:
+    cmds:
+      - task: _helm-install
+        vars:
+          NAMESPACE: cert-manager
+          CHARTNAME: cert-manager-webhook-hetzner
+    env:
+      KUBECONFIG: "k3s_kubeconfig.yaml"
+  helm-install-cert-manager:
+    cmds:
+      - task: _helm-install
+        vars:
+          NAMESPACE: cert-manager
+          CHARTNAME: cert-manager
+    env:
+      KUBECONFIG: "k3s_kubeconfig.yaml"
+  helm-install-cert-manager-templates:
+    cmds:
       - task: _helm-install
         vars:
           NAMESPACE: cert-manager
           CHARTNAME: cert-manager-templates
-      - task: _helm-install
-        vars:
-          NAMESPACE: traefik
-          CHARTNAME: traefik-templates
-      - task: _helm-install
-        vars:
-          NAMESPACE: kuberpult
-          CHARTNAME: kuberpult
     env:
       KUBECONFIG: "k3s_kubeconfig.yaml"
+
   helm-install-kuberpult:
     cmds:
       - task: _helm-install
@@ -140,9 +305,65 @@ tasks:
     env:
       KUBECONFIG: "k3s_kubeconfig.yaml"
 
+  helm-install-istio:
+    cmds:
+      - task: _helm-install
+        vars:
+          NAMESPACE: istio-system
+          CHARTNAME: istio-base
+      - task: _helm-install
+        vars:
+          NAMESPACE: istio-system
+          CHARTNAME: istiod
+      - task: _helm-install
+        vars:
+          NAMESPACE: istio-ingress
+          CHARTNAME: istio-ingress
+    env:
+      KUBECONFIG: "k3s_kubeconfig.yaml"
 
+  helm-install-grafana:
+    cmds:
+      - task: _helm-install
+        vars:
+          NAMESPACE: istio-system
+          CHARTNAME: grafana
+    env:
+      KUBECONFIG: "k3s_kubeconfig.yaml"
+  helm-install-jaeger:
+    cmds:
+      - task: _helm-install
+        vars:
+          NAMESPACE: istio-system
+          CHARTNAME: jaeger
+    env:
+      KUBECONFIG: "k3s_kubeconfig.yaml"
+  helm-install-prometheus:
+    cmds:
+      - task: _helm-install
+        vars:
+          NAMESPACE: istio-system
+          CHARTNAME: prometheus
+    env:
+      KUBECONFIG: "k3s_kubeconfig.yaml"
   helm-upgrade:
     cmds:
+      - task: _helm-upgrade
+        vars:
+          NAMESPACE: cert-manager
+          CHARTNAME: cert-manager
+      - task: _helm-upgrade
+        vars:
+          NAMESPACE: cert-manager
+          CHARTNAME: cert-manager-webhook-hetzner
+      - task: helm-upgrade-cert-manager-templates
+      - task: _helm-upgrade
+        vars:
+          NAMESPACE: echo-server
+          CHARTNAME: echo-server
+      - task: helm-upgrade-istio
+      # - task: helm-upgrade-kiali
+      - task: helm-upgrade-kuberpult
       - task: _helm-upgrade
         vars:
           NAMESPACE: nginx
@@ -151,18 +372,83 @@ tasks:
         vars:
           NAMESPACE: argocd
           CHARTNAME: argocd
+      - task: helm-upgrade-dex
+      - task: helm-upgrade-oauth2-proxy
+      - task: helm-upgrade-jaeger
+      - task: helm-upgrade-grafana
+      - task: helm-upgrade-prometheus
+    env:
+      KUBECONFIG: "k3s_kubeconfig.yaml"
+  helm-upgrade-cert-manager-templates:
+    cmds:
       - task: _helm-upgrade
         vars:
           NAMESPACE: cert-manager
           CHARTNAME: cert-manager-templates
+    env:
+      KUBECONFIG: "k3s_kubeconfig.yaml"
+  helm-upgrade-oauth2-proxy:
+    cmds:
       - task: _helm-upgrade
         vars:
-          NAMESPACE: traefik
-          CHARTNAME: traefik-templates
+          NAMESPACE: oauth2-proxy
+          CHARTNAME: oauth2-proxy
+    env:
+      KUBECONFIG: "k3s_kubeconfig.yaml"
+  helm-upgrade-dex:
+    cmds:
       - task: _helm-upgrade
         vars:
-          NAMESPACE: kuberpult
-          CHARTNAME: kuberpult
+          NAMESPACE: dex
+          CHARTNAME: dex
+    env:
+      KUBECONFIG: "k3s_kubeconfig.yaml"
+  helm-upgrade-kiali:
+    cmds:
+      - task: _helm-upgrade
+        vars:
+          NAMESPACE: istio-system
+          CHARTNAME: kiali
+    env:
+      KUBECONFIG: "k3s_kubeconfig.yaml"
+  helm-upgrade-istio:
+    cmds:
+      - task: _helm-upgrade
+        vars:
+          NAMESPACE: istio-system
+          CHARTNAME: istio-base
+      - task: _helm-upgrade
+        vars:
+          NAMESPACE: istio-system
+          CHARTNAME: istiod
+      - task: _helm-upgrade
+        vars:
+          NAMESPACE: istio-ingress
+          CHARTNAME: istio-ingress
+    env:
+      KUBECONFIG: "k3s_kubeconfig.yaml"
+  helm-upgrade-grafana:
+    cmds:
+      - task: _helm-upgrade
+        vars:
+          NAMESPACE: istio-system
+          CHARTNAME: grafana
+    env:
+      KUBECONFIG: "k3s_kubeconfig.yaml"
+  helm-upgrade-jaeger:
+    cmds:
+      - task: _helm-upgrade
+        vars:
+          NAMESPACE: istio-system
+          CHARTNAME: jaeger
+    env:
+      KUBECONFIG: "k3s_kubeconfig.yaml"
+  helm-upgrade-prometheus:
+    cmds:
+      - task: _helm-upgrade
+        vars:
+          NAMESPACE: istio-system
+          CHARTNAME: prometheus
     env:
       KUBECONFIG: "k3s_kubeconfig.yaml"
   helm-upgrade-kuberpult:
@@ -173,3 +459,35 @@ tasks:
           CHARTNAME: kuberpult
     env:
       KUBECONFIG: "k3s_kubeconfig.yaml"
+  delete_lb:
+    cmds:
+      - task: _helm-uninstall
+        vars:
+          CHARTNAME: istio-ingress
+          NAMESPACE: istio-ingress
+      - task: _helm-uninstall
+        vars:
+          CHARTNAME: istio-base
+          NAMESPACE: istio-system
+      - task: _helm-uninstall
+        vars:
+          CHARTNAME: istiod
+          NAMESPACE: istio-system
+    env:
+      KUBECONFIG: "k3s_kubeconfig.yaml"
+  _helm-uninstall:
+    internal: true
+    cmds:
+      - helm uninstall -n {{.NAMESPACE}} {{.CHARTNAME}} || echo "{{.CHARTNAME}} already uninstalled"
+    env:
+      KUBECONFIG: "k3s_kubeconfig.yaml"
+    requires:
+      vars: [CHARTNAME, NAMESPACE]
+  _label-namespace-istio-injection-enabled:
+    internal: true
+    cmds:
+    - kubectl label namespace {{.NAMESPACE}} istio-injection=enabled
+    env:
+      KUBECONFIG: "k3s_kubeconfig.yaml"
+    requires:
+      vars: [NAMESPACE]

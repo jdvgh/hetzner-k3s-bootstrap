@@ -1,6 +1,6 @@
 dependencies:
 - name: kuberpult
   repository: file://dependencies/kuberpult
-  version: v1.21.0
-digest: sha256:e9c6f09114a45693403e30b2b3d5d366225b71609d08906ff8db1eb9ed13739b
-generated: "2024-01-25T11:45:14.275371776+01:00"
+  version: v2.24.0
+digest: sha256:a8f533bb9b5f27b3939dbbf5796abe258fb03cc5d913fe6e8cc9b617c3bdf5eb
+generated: "2024-04-20T15:33:46.994877977+02:00"

@@ -1,0 +1,17 @@
+gateway:
+  httpHosts:
+  - "*.example.com"
+  httpsHosts:
+  - "*.example.com"
+certificate:
+  dnsNames:
+  - "*.example.com"
+  name: letsencrypt-staging
+authorizationPolicy:
+  hosts:
+  - "*.example.com"
+  notHosts:
+  - "kuberpult.example.com"
+  - "dex.example.com"
+  - "argocd.example.com"
+

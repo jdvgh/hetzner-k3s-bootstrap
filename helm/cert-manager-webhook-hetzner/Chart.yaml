@@ -1,0 +1,7 @@
+apiVersion: v2
+name: bootstrapper
+version: 0.0.1
+dependencies:
+- name: cert-manager-webhook-hetzner
+  version: "v1.3.1"
+  repository: "https://vadimkim.github.io/cert-manager-webhook-hetzner"

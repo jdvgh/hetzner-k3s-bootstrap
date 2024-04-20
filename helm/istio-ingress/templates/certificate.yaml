@@ -1,0 +1,12 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: istio-ingress-cert-wc
+  namespace: {{ .Release.Namespace }}
+spec:
+  secretName: istio-ingress-cert-wc-secret
+  dnsNames:
+{{ toYaml .Values.certificate.dnsNames | indent 2 }}
+  issuerRef:
+    name: {{ .Values.certificate.name }}
+    kind: ClusterIssuer

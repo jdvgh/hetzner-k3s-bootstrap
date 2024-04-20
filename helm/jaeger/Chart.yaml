@@ -1,0 +1,7 @@
+apiVersion: v2
+name: bootstrapper
+version: 0.0.1
+dependencies:
+- name: jaeger
+  version: "3.0.0"
+  repository: "https://jaegertracing.github.io/helm-charts"

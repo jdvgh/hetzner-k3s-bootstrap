@@ -29,8 +29,8 @@
 
 # Copyright 2023 freiheit.com
 
-{{- if .Values.tag }}
-{{ fail "Values.tag cannot be used anymore. If you have to overwrite the tag, use cd.tag or frontend.tag instead"}}
+{{- if .Values.cd.tag }}
+{{ fail "Values.cd.tag cannot be used anymore. We only support the same appVersion for all services at this point."}}
 {{ end -}}
 
 ---
@@ -42,7 +42,7 @@ metadata:
     app: kuberpult-cd-service
 {{- if .Values.datadogTracing.enabled }}
     tags.datadoghq.com/service: kuberpult-cd-service
-    tags.datadoghq.com/version: {{ .Values.cd.tag }}
+    tags.datadoghq.com/version: {{ $.Chart.AppVersion }}
     tags.datadoghq.com/env: {{ .Values.datadogTracing.environment }}
 {{- end }}
 spec:
@@ -64,9 +64,9 @@ spec:
 {{- if .Values.datadogTracing.enabled }}
         tags.datadoghq.com/env: {{ .Values.datadogTracing.environment }}
         tags.datadoghq.com/service: kuberpult-cd-service
-        tags.datadoghq.com/version: {{ .Values.cd.tag }}
+        tags.datadoghq.com/version: {{ $.Chart.AppVersion }}
       annotations:
-        apm.datadoghq.com/env: '{"DD_SERVICE":"kuberpult-cd-service","DD_ENV":"{{ .Values.datadogTracing.environment }}","DD_VERSION":"{{ .Values.cd.tag }}"}'
+        apm.datadoghq.com/env: '{"DD_SERVICE":"kuberpult-cd-service","DD_ENV":"{{ .Values.datadogTracing.environment }}","DD_VERSION":"{{ $.Chart.AppVersion }}"}'
 {{- end }}
     spec:
       {{- with .Values.imagePullSecrets }}
@@ -75,7 +75,7 @@ spec:
       {{- end }}
       containers:
       - name: service
-        image: "{{ .Values.hub }}/{{ .Values.cd.image }}:{{ .Values.cd.tag }}"
+        image: "{{ .Values.hub }}/{{ .Values.cd.image }}:{{ $.Chart.AppVersion }}"
         ports:
           - name: http
             containerPort: 8080
@@ -88,13 +88,19 @@ spec:
             path: /healthz
             port: http
           initialDelaySeconds: {{ .Values.cd.probes.readiness.initialDelaySeconds }}
-          periodSeconds: 10
+          periodSeconds: {{ .Values.cd.probes.readiness.periodSeconds }}
+          successThreshold: {{ .Values.cd.probes.readiness.successThreshold }}
+          timeoutSeconds: {{ .Values.cd.probes.readiness.timeoutSeconds }}
+          failureThreshold: {{ .Values.cd.probes.readiness.failureThreshold }}
         livenessProbe:
           httpGet:
             path: /healthz
             port: http
           initialDelaySeconds: {{ .Values.cd.probes.liveness.initialDelaySeconds }}
-          periodSeconds: 10
+          periodSeconds: {{ .Values.cd.probes.liveness.periodSeconds }}
+          successThreshold: {{ .Values.cd.probes.liveness.successThreshold }}
+          timeoutSeconds: {{ .Values.cd.probes.liveness.timeoutSeconds }}
+          failureThreshold: {{ .Values.cd.probes.liveness.failureThreshold }}
         resources:
           limits:
             cpu: "{{ .Values.cd.resources.limits.cpu }}"
@@ -111,7 +117,7 @@ spec:
           value: {{ .Values.log.format | quote }}
         - name: LOG_LEVEL
           value: {{ .Values.log.level | quote }}
-{{- if .Values.argocd.sendWebhook }}
+{{- if .Values.argocd.sendWebhooks }}
         - name: KUBERPULT_ARGO_CD_SERVER
           value: {{ .Values.argocd.server | quote }}
 {{- else }}
@@ -120,6 +126,8 @@ spec:
 {{- end }}
         - name: KUBERPULT_ARGO_CD_INSECURE
           value: {{ .Values.argocd.insecure | quote }}
+        - name: KUBERPULT_ARGO_CD_GENERATE_FILES
+          value: {{ .Values.argocd.generateFiles | quote }}
         - name: KUBERPULT_GIT_WEB_URL
           value: {{ .Values.git.webUrl | quote }}
 {{- if .Values.datadogTracing.enabled }}
@@ -141,6 +149,10 @@ spec:
               fieldPath: metadata.labels['tags.datadoghq.com/version']
         - name: KUBERPULT_ENABLE_TRACING
           value: "{{ .Values.datadogTracing.enabled }}"
+{{- end }}
+{{- if .Values.datadogTracing.enabled }}
+        - name: DD_API_KEY_LOCATION
+          value: "/etc/datadog/api-key"
 {{- end }}
 
 {{- if .Values.datadogTracing.enabled }}
@@ -175,11 +187,23 @@ spec:
           value: "{{ .Values.cd.enableSqlite }}"
         - name: KUBERPULT_GIT_NETWORK_TIMEOUT
           value: "{{ .Values.git.networkTimeout }}"
+        - name: KUBERPULT_GIT_WRITE_COMMIT_DATA
+          value: "{{ .Values.git.enableWritingCommitData }}"
+        - name: KUBERPULT_GIT_MAXIMUM_COMMITS_PER_PUSH
+          value: "{{ .Values.git.maximumCommitsPerPush }}"
+        - name: KUBERPULT_ENABLE_PROFILING
+          value: "{{ .Values.datadogProfiling.enabled }}"
+        - name: KUBERPULT_MAXIMUM_QUEUE_SIZE
+          value: "{{ .Values.cd.backendConfig.queueSize }}"
         volumeMounts:
         - name: repository
           mountPath: /repository
         - name: ssh
           mountPath: /etc/ssh
+{{- if .Values.datadogProfiling.enabled }}
+        - name: datadog
+          mountPath: /etc/datadog/
+{{- end }}
 {{- if .Values.pgp.keyRing }}
         - name: keyring
           mountPath: /keyring
@@ -208,6 +232,11 @@ spec:
       - name: ssh
         secret:
           secretName: kuberpult-ssh
+{{- if .Values.datadogProfiling.enabled }}
+      - name: datadog
+        secret:
+          secretName: kuberpult-datadog
+{{- end }}
 {{- if .Values.pgp.keyRing }}
       - name: keyring
         configMap:
@@ -260,6 +289,16 @@ data:
   identity: {{ .Values.ssh.identity | b64enc | quote }}
   ssh_known_hosts: {{ .Values.ssh.known_hosts | b64enc | quote }}
 ---
+{{- if .Values.datadogProfiling.enabled }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: kuberpult-datadog
+data:
+  api-key: {{ .Values.datadogProfiling.apiKey | b64enc | quote }}
+---
+{{- end }}
+
 {{- if .Values.pgp.keyRing }}
 {{- if not (mustRegexMatch "^-----BEGIN PGP PUBLIC KEY BLOCK-----" .Values.pgp.keyRing) }}
 {{ fail "The pgp keyring is invalid. Please export it using `gpg --armor --export`"}}

@@ -1,0 +1,11 @@
+hosts:
+  - grafana.example.com
+secrets:
+  userName: test
+  password: test
+grafana:
+  admin:
+    ## Name of the secret. Can be templated.
+    existingSecret: "grafana-secret"
+    userKey: user
+    passwordKey: password

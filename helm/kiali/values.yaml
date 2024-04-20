@@ -1,0 +1,37 @@
+hosts:
+  - kiali.example.com
+kiali-server:
+  auth:
+    strategy: anonymous
+  external_services:
+    grafana:
+      enabled: true
+      in_cluster_url: 'http://grafana.istio-system:80'
+      url: 'https://grafana.example.com'
+      dashboards:
+      - name: "Istio Service Dashboard"
+        variables:
+          namespace: "var-namespace"
+          service: "var-service"
+      - name: "Istio Workload Dashboard"
+        variables:
+          namespace: "var-namespace"
+          workload: "var-workload"
+      - name: "Istio Mesh Dashboard"
+      - name: "Istio Control Plane Dashboard"
+      - name: "Istio Performance Dashboard"
+      - name: "Istio Wasm Extension Dashboard"
+      prometheus:
+        # Prometheus service name is "metrics" and is in the "telemetry" namespace
+        url: "http://prometheus-kube-state-metrics.istio-system:8080/"
+      tracing:
+        # Enabled by default. Kiali will anyway fallback to disabled if
+        # Jaeger is unreachable.
+        enabled: true
+        # Jaeger service name is "tracing" and is in the "telemetry" namespace.
+        # Make sure the URL you provide corresponds to the non-GRPC enabled endpoint
+        # if you set "use_grpc" to false.
+        in_cluster_url: "http://jaeger-k8s-collector.istio-system:14250"
+        use_grpc: true
+        # Public facing URL of Jaeger
+        url: "https://jaeger.example.com"

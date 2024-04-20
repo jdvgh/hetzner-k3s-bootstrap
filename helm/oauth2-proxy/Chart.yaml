@@ -1,0 +1,7 @@
+apiVersion: v2
+name: bootstrapper-kuberpult
+version: 0.0.1
+dependencies:
+- name: oauth2-proxy
+  version: "7.4.1"
+  repository: "https://oauth2-proxy.github.io/manifests"

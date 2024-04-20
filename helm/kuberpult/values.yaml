@@ -1,23 +1,23 @@
+hosts:
+  - kuberpult.example.com
 kuberpult:
+  hub: pregloz
   cd:
-    # tag: "1.15.0"
     resources:
       limits:
-        cpu: 1
+        cpu: 500m
         memory: 512Mi
       requests:
-        cpu: 1
+        cpu: 256m
         memory: 512Mi
-  # frontend:
-  #   resources:
-  #     limits:
-  #       cpu: 500m
-  #       memory: 250Mi
-  #     requests:
-  #       cpu: 500m
-  #       memory: 250Mi
-  rollout:
-    enabled: false
+  frontend:
+    resources:
+      limits:
+        cpu: 500m
+        memory: 250Mi
+      requests:
+        cpu: 256m
+        memory: 250Mi
   git:
     url: "ssh://git@github.com/jdvgh/kuberpult-manifests-repo.git"
     branch: "main"
@@ -71,21 +71,22 @@ kuberpult:
       # If no group is configured for an environment, the environment group name is the same as the environment name, here "development".
       # The policy will be available on the kuberpult-rbac config map.
       policy_csv: |
-        Developer, CreateLock, *:*, *, allow
-        Developer, DeleteLock, *:*, *, allow
-        Developer, CreateRelease, *:*, *, allow
-        Developer, DeployRelease, *:*, *, allow
-        Developer, CreateUndeploy, *:*, *, allow
-        Developer, DeployUndeploy, *:*, *, allow
-        Developer, CreateEnvironment, *:*, *, allow
-        Developer, DeleteEnvironmentApplication, *:*, *, allow
-        Developer, DeployReleaseTrain, *:*, *, allow
+        p, role:Developer, CreateLock, *:*, *, allow
+        p, role:Developer, DeleteLock, *:*, *, allow
+        p, role:Developer, CreateRelease, *:*, *, allow
+        p, role:Developer, DeployRelease, *:*, *, allow
+        p, role:Developer, CreateUndeploy, *:*, *, allow
+        p, role:Developer, DeployUndeploy, *:*, *, allow
+        p, role:Developer, CreateEnvironment, *:*, *, allow
+        p, role:Developer, DeleteEnvironmentApplication, *:*, *, allow
+        p, role:Developer, DeployReleaseTrain, *:*, *, allow
+        g, jdvgh-gh-org:jdvgh-org-team1, role:Developer
       # List of scopes to validate the token. Please add them as comma separated values.
       # g, jdvgh-gh-org:jdvgh-org-team1, role:admin
-      clientId: ""
-      clientSecret: ""
-      baseURL: "https://kuberpult.com/dex"
-      scopes: [openid, groups, email, profile, federated:id]
+      clientId: "sample-kuberpult-dex"
+      clientSecret: "sample-kuberpult-dex-secret"
+      baseURL: "https://kuberpult.example.com/dex"
+      scopes: "openid, groups, email, profile, federated:id"
 
   # # The Dex configuration values. For more information please check the Dex repository https://github.com/dexidp/dex
   dex:
@@ -131,48 +132,15 @@ kuberpult:
           id: github
           name: GitHub
           config:
-            clientID: $kuberpult-oauth:CLIENTID
-            clientSecret: $kuberpult-oauth:CLIENTSECRET
+            redirectURI: https://kuberpult.example.com/dex/callback
+            clientID: "sample-github-oauth-id"
+            clientSecret: "sample-github-oauth-secret"
             orgs:
               - name: jdvgh-gh-org
-
-# kuberpult:
-#   argocd:
-#     baseUrl: "argocd.example.pw"
-#   auth:
-#     dexAuth:
-#       clientId: "secret"
-#       clientSecret: "secret"
-#       baseURL: "https://kuberpult.example.pw"
-#   ssh:
-#     # This section is necessary to checkout the manifest repo from git. Only ssh is supported (no https).
-#     identity: |
-#       -----BEGIN OPENSSH PRIVATE KEY-----
-#       -----END OPENSSH PRIVATE KEY-----
-#   dex:
-#     config:
-#       issuer: https://kuberpult.example.pw/dex
-# secrets:
-#    clientid: "secret"
-#    clientsecret: "secret"
-# ingress:
-#   - name: kuberpult
-#     namespace: kuberpult
-#     annotations:
-#       cert-manager.io/cluster-issuer: "letsencrypt-staging"
-#     hosts:
-#       - kuberpult.example.pw
-#     secretName: kuberpult-example-pw-cert
-#     rules:
-#     - host: kuberpult.example.pw
-#       http:
-#         paths:
-#           - path: /
-#             pathType: Prefix
-#             backend:
-#               service:
-#                 name: kuberpult-frontend-service
-#                 port:
-#                   name: http
-# ingressRoute:
-#   argocd: kuberpult.example.pw
+      staticClients:
+      - id: sample-kuberpult-dex
+        secret: sample-kuberpult-dex-secret
+        name: 'kuberpult'
+        # Where the app will be running.
+        redirectURIs:
+            - 'https://kuberpult.example.com/callback'

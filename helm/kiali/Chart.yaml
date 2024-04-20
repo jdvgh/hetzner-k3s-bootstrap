@@ -1,0 +1,7 @@
+apiVersion: v2
+name: bootstrapper
+version: 0.0.1
+dependencies:
+- name: kiali-server
+  version: "v1.82"
+  repository: "https://kiali.org/helm-charts"
